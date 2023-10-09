@@ -4,11 +4,12 @@ library(dplyr)
 library(ggplot2)
 library(leaflet)
 library(tidyverse)
+library(plotly)
 
 # Load your data
-fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
 fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
 incident_types <- c("Total", unique(fema_data$incidentType))
 
 # UI
@@ -48,11 +49,12 @@ ui <- dashboardPage(
       tabItem(tabName = "trend_tab",
               h1("Trend for FEMA data"),
               selectInput("disaster_type", "Choose a Disaster Type", sort(unique(fema_data$incidentType))),
-              selectInput("state", "Choose a State", sort(unique(fema_data$state))),
-              plotOutput("timeSeriesPlot"),
-              plotOutput("trendPlot"),
-              plotOutput("typePlot")
+              selectInput("state", "Choose a State", c("None", sort(unique(fema_data$state)))),
+              sliderInput("time_range", "Select Time Range:", min = min(fema_data$fyDeclared), max = max(fema_data$fyDeclared), value = c(min(fema_data$fyDeclared), max(fema_data$fyDeclared))),
+              plotlyOutput("linePlot"),
+              plotlyOutput("barPlot")
       ),
+      
       tabItem(tabName = "undetermined2",
               h1("Undetermined 2"),
               p("Contents to be added...")
@@ -140,78 +142,33 @@ server <- function(input, output, session) {
   })
   
   
-  output$timeSeriesPlot <- renderPlot({
-    # Filter the data based on input
-    filtered_data <- subset(fema_data, 
-                            incidentType == input$disaster_type & 
-                              state == input$state)
+  output$linePlot <- renderPlotly({
+    filtered_data <- fema_data %>%
+      filter(incidentType == input$disaster_type & (state == input$state | input$state == "None")) %>%
+      group_by(fyDeclared) %>%
+      summarise(frequency = n())
     
-    # Convert declarationDate to Date class if not already
-    filtered_data$declarationDate <- as.Date(filtered_data$declarationDate, format="%Y-%m-%d") 
+    p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
+      geom_line() +
+      ggtitle(paste("Frequency of Selected Incident Type Over Years in", ifelse(input$state == "None", "All States", input$state)))
     
-    # Ensure that the filtered data is not empty
-    if(nrow(filtered_data) == 0) {
-      ggplot() +
-        ggtitle("No data available for selected options") +
-        theme_minimal()
-    } else {
-      # Resampling by month and count the occurrences
-      monthly_data <- as.data.frame(table(cut(filtered_data$declarationDate, breaks = "month")))
-      
-      # Ensure that Var1 is in Date format
-      monthly_data$Var1 <- as.Date(monthly_data$Var1)
-      
-      # Generate a time series plot
-      ggplot(data=monthly_data, aes(x=Var1, y=Freq)) +
-        geom_line() +
-        labs(
-          title = paste('Monthly Time Series for', input$disaster_type, 
-                        'in', input$state),
-          x = 'Date',
-          y = 'Count'
-        ) +
-        theme_minimal() +
-        scale_x_date(
-          limits = as.Date(c("1960-01-01", "2023-01-01")),
-          breaks = seq(as.Date("1960-01-01"), as.Date("2023-01-01"), by="5 years"),
-          date_labels = "%Y"
-        )
-    }
+    
+    ggplotly(p)
   })
-output$trendPlot <- renderPlot({ 
   
-  Years = as.numeric(substr(fema_data$declarationDate, 1, 4))
-  years <- data.frame(Years = as.numeric(substr(fema_data$declarationDate, 1, 4)))
-  fema_data$year <- years$Years
-  
-  fema_data_trend <- subset(fema_data, year >= 1960)  %>%
-    group_by(year) %>%
-    summarise(count = n())
-  
-  ggplot(fema_data_trend)+
-    geom_point(mapping =  aes(x=year, y=count)) +
-    geom_line(mapping =  aes(x=year, y=count))+
-    labs(title = "Total Count of Incident by Year",
-         x = "Year",
-         y = "Number of Incidents") 
-})
+  output$barPlot <- renderPlotly({
+    filtered_data <- fema_data %>%
+      filter(incidentType == input$disaster_type & (state == input$state | input$state == "None") & fyDeclared >= input$time_range[1] & fyDeclared <= input$time_range[2]) %>%
+      group_by(fyDeclared) %>%
+      summarise(frequency = n())
+    
+    p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
+      geom_bar(stat = "identity") +
+      ggtitle(paste("Frequency of Selected Incident Type Over Specified Time Range in", ifelse(input$state == "None", "All States", input$state)))
+    
+    ggplotly(p)
+  })
 
-output$typePlot <- renderPlot({ 
-  Years = as.numeric(substr(fema_data$declarationDate, 1, 4))
-  years <- data.frame(Years = as.numeric(substr(fema_data$declarationDate, 1, 4)))
-  fema_data$year <- years$Years
-  
-  fema_data_type <- subset(fema_data, year >= 1960)  %>%
-    group_by(year, incidentType) %>%
-    summarise(count = n())
-  
-  ggplot(fema_data_type)+
-    geom_line(mapping =  aes(x=year, y=count,color = incidentType))+
-    labs(title = "Count of Incident by Year based on Incident Type",
-         x = "Year",
-         y = "Number of Incidents") 
-})
-  
 }
 
 # Run the application
