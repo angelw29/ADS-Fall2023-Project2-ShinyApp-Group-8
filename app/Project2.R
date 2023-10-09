@@ -9,6 +9,7 @@ library(tidyverse)
 fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
 fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
 state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+incident_types <- c("Total", unique(fema_data$incidentType))
 
 # UI
 ui <- dashboardPage(
@@ -178,6 +179,7 @@ server <- function(input, output, session) {
     }
   })
 output$trendPlot <- renderPlot({ 
+  
   Years = as.numeric(substr(fema_data$declarationDate, 1, 4))
   years <- data.frame(Years = as.numeric(substr(fema_data$declarationDate, 1, 4)))
   fema_data$year <- years$Years
