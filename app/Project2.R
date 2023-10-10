@@ -189,12 +189,15 @@ server <- function(input, output, session) {
       group_by(fyDeclared) %>%
       summarise(frequency = n())
     if(nrow(filtered_data) == 0) {
-      ggplot() +
+      p <- ggplot(filtered_data) +
         ggtitle("No data available for selected options") +
         theme_minimal()
     } else {
+      max_value <- max(filtered_data$frequency)
     p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
       geom_line() +
+      geom_point()+
+      coord_cartesian(ylim = c(0, max_value))+
       ggtitle(paste("Frequency of Selected Incident Type Over Years in", ifelse(input$state == "None", "All States", input$state)))
     }
     
