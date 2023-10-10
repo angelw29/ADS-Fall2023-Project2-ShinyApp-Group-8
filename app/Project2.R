@@ -30,8 +30,13 @@ ui <- dashboardPage(
   dashboardBody(
     tabItems(
       tabItem(tabName = "intro",
-              h1("Introduction"),
-              p("Contents to be added..")
+              img(src = "https://kubrick.htvapps.com/htv-prod-media.s3.amazonaws.com/images/fema-0120-1652375316.jpg", width = "500px"),
+              h1("Welcome to the Disaster Visualization App!"),
+              p("This application is designed to provide a comprehensive and intuitive way to explore and analyze FEMA Disaster Declarations Summaries data. Through interactive maps, pie charts, line graphs, and histograms, you can gain valuable insights into the distribution and frequency of disasters. These visualizations offer a clear and engaging representation of disaster data, aiding in understanding the business impact and patterns associated with various types of disasters."),
+              h3("About FEMA (Federal Emergency Management Agency)"),
+              p("The Federal Emergency Management Agency (FEMA) is a crucial agency within the United States Department of Homeland Security. FEMA plays a pivotal role in coordinating disaster response and recovery efforts across the nation. Their mission revolves around assisting individuals and communities before, during, and after disasters. This assistance includes providing support, coordinating resources, and promoting disaster preparedness and mitigation strategies to minimize the impact of disasters on affected populations and regions. Through their initiatives, FEMA aims to enhance the resilience and preparedness of communities in the face of emergencies, ultimately saving lives and minimizing damage.")
+              
+              
       ),
       tabItem(tabName = "data",
               h1("Dataset"),
