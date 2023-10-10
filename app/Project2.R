@@ -6,13 +6,13 @@ library(leaflet)
 library(tidyverse)
 library(plotly)
 library(scales)
+library(DT)
 
 # Load your data
-fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
 fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
 incident_types <- c("Total", sort(unique(fema_data$incidentType)))
-state_list <- c(sort(unique(fema_data$state)), "None")
 
 # UI
 ui <- dashboardPage(
@@ -41,13 +41,13 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "data",
               h1("Dataset"),
-              DT::dataTableOutput("table")
+              DTOutput("table")
       ),
       tabItem(tabName = "declaration_counts",
               fluidRow(
                 box(width = 2,
                     selectInput("incidentType", "Select Incident Type:", choices = incident_types),
-                    selectInput("state_string", "Choose a State:", choices = state_list)
+                    selectInput("state_string", "Choose a State:", choices =c(sort(unique(fema_data$state)), "None"))
                 ),
                 box(leafletOutput("map", height = "450px"), width = 5),
                 box(plotOutput("disasterPieChart", height = "450px"), width = 5)
@@ -101,8 +101,11 @@ server <- function(input, output, session) {
   # ... existing server logic ...
   
   # For the "Dataset" tab
-  output$table <- DT::renderDataTable({
-    fema_data
+  output$table <- renderDT({
+    datatable(
+      fema_data,
+      options = list(scrollX = TRUE)
+    )
   })
   
   # Additional logic from your snippet
@@ -166,18 +169,17 @@ server <- function(input, output, session) {
     
     else
       {state_data <- fema_data[fema_data$state == input$state_string, ]
-    
-    ggplot(state_data, aes(x = "", fill = incidentType)) +
-      geom_bar(width = 1) +
-      coord_polar(theta = "y") +
-      labs(
-        title = paste("Fractions of Natural Disasters in", input$state_string),
-        x = NULL,
-        y = NULL,
-        fill = "Incident Type"  # Changing legend title
-      ) +
-      scale_fill_brewer(palette = "Set3") +
-      theme_minimal()}
+        ggplot(state_data, aes(x = "", fill = incidentType)) +
+          geom_bar(width = 1) +
+          coord_polar(theta = "y") +
+          labs(
+            title = paste("Fractions of Natural Disasters in", input$state_string),
+            x = NULL,
+            y = NULL,
+            fill = "Incident Type"  # Changing legend title
+          ) +
+          scale_fill_brewer(palette = "Set3") +
+          theme_minimal()}
   })
   
   #For the trends tab 
@@ -186,11 +188,15 @@ server <- function(input, output, session) {
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None")) %>%
       group_by(fyDeclared) %>%
       summarise(frequency = n())
-    
+    if(nrow(filtered_data) == 0) {
+      ggplot() +
+        ggtitle("No data available for selected options") +
+        theme_minimal()
+    } else {
     p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
       geom_line() +
       ggtitle(paste("Frequency of Selected Incident Type Over Years in", ifelse(input$state == "None", "All States", input$state)))
-    
+    }
     
     ggplotly(p)
   })
