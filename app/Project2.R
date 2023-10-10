@@ -11,11 +11,11 @@ library(lubridate)
 library(DT)
 
 # Load your data
-fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
 cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
 incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
-assistance_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/PublicAssistanceApplicantsProgramDeliveries.csv')
+assistance_data = read.csv('//Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/PublicAssistanceApplicantsProgramDeliveries.csv')
 
 
 # UI
@@ -392,12 +392,12 @@ server <- function(input, output, session) {
   
   #For the Findings tab
   output$dataSize <- renderText({
-    paste(nrow(fema_data), " rows")
+    paste(nrow(cleaned_data), " rows")
   })
   
   
   output$disastersPerYear <- renderPlot({
-    yearly_data <- fema_data %>%
+    yearly_data <- cleaned_data %>%
       group_by(fyDeclared) %>%
       summarise(total_disasters = n()) %>%
       arrange(desc(total_disasters))
@@ -414,12 +414,12 @@ server <- function(input, output, session) {
   })
   
   output$numIncidentTypes <- renderText({
-    num_types <- n_distinct(fema_data$incidentType)
+    num_types <- n_distinct(cleaned_data$incidentType)
     return(num_types)
   })
   
   output$incidentTypes <- renderTable({
-    incident_data <- fema_data %>%
+    incident_data <- cleaned_data %>%
       group_by(incidentType) %>%
       summarise(total_incidents = n()) %>%
       arrange(desc(total_incidents))
@@ -435,8 +435,7 @@ server <- function(input, output, session) {
   })
   
   output$stateInsights <- renderUI({
-    # Group the data by state and count the number of disasters
-    state_data <- fema_data %>%
+    state_data <- cleaned_data %>%
       group_by(state) %>%
       summarise(total_disasters = n()) %>%
       arrange(desc(total_disasters))
@@ -453,7 +452,7 @@ server <- function(input, output, session) {
   })
   
   output$incidentStateTable <- renderTable({
-    incident_state_data <- fema_data %>%
+    incident_state_data <- cleaned_data %>%
       group_by(state, incidentType) %>%
       summarise(total_incidents = n())
     
@@ -463,8 +462,8 @@ server <- function(input, output, session) {
   })
   
   output$seasonalTrendsPlot <- renderPlot({
-    fema_data$month <- lubridate::month(lubridate::ymd_hms(fema_data$declarationDate), label = TRUE)
-    monthly_data <- fema_data %>%
+    cleaned_data$month <- lubridate::month(lubridate::ymd_hms(cleaned_data$declarationDate), label = TRUE)
+    monthly_data <- cleaned_data %>%
       group_by(month) %>%
       summarise(total_disasters = n()) %>%
       arrange(desc(total_disasters))
@@ -475,8 +474,8 @@ server <- function(input, output, session) {
   })
   
   output$seasonalInsights <- renderText({
-    fema_data$month <- lubridate::month(lubridate::ymd_hms(fema_data$declarationDate), label = TRUE)
-    monthly_data <- fema_data %>%
+    cleaned_data$month <- lubridate::month(lubridate::ymd_hms(cleaned_data$declarationDate), label = TRUE)
+    monthly_data <- cleaned_data %>%
       group_by(month) %>%
       summarise(total_disasters = n()) %>%
       arrange(desc(total_disasters))
@@ -488,7 +487,7 @@ server <- function(input, output, session) {
   })
   
   output$tribalRequests <- renderText({
-    total_disasters <- nrow(fema_data)
+    total_disasters <- nrow(cleaned_data)
     tribal_requests <- sum(fema_data$tribalRequest == 1)
     percentage_tribal <- (tribal_requests / total_disasters) * 100
     paste("Percentage of disasters with Tribal Requests: ", round(percentage_tribal, 2), "%")
@@ -496,7 +495,7 @@ server <- function(input, output, session) {
   
   output$mostCommonProgram <- renderText({
     # Summing up the program activations
-    program_data <- fema_data %>% 
+    program_data <- cleaned_data %>% 
       summarise(
         IH = sum(ihProgramDeclared, na.rm = TRUE),
         IA = sum(iaProgramDeclared, na.rm = TRUE),
@@ -511,7 +510,7 @@ server <- function(input, output, session) {
   })
   
   output$stateProgramTable <- renderTable({
-    program_by_state <- fema_data %>%
+    program_by_state <- cleaned_data %>%
       group_by(state) %>%
       summarise(
         IH = sum(ihProgramDeclared, na.rm = TRUE),
@@ -520,22 +519,18 @@ server <- function(input, output, session) {
         HM = sum(hmProgramDeclared, na.rm = TRUE)
       )
     
-    # Calculate the total number of program activations for each state
     program_by_state$Total = rowSums(program_by_state[-1], na.rm = TRUE)
     
-    # Calculate the percentage of each program activated
     program_by_state$IH_Percent = (program_by_state$IH / program_by_state$Total) * 100
     program_by_state$IA_Percent = (program_by_state$IA / program_by_state$Total) * 100
     program_by_state$PA_Percent = (program_by_state$PA / program_by_state$Total) * 100
     program_by_state$HM_Percent = (program_by_state$HM / program_by_state$Total) * 100
     
-    # Create a new column that concatenates the names of the activated programs and their percentages
     program_by_state$Activated_Programs <- apply(program_by_state[, 2:5], 1, function(row) {
       activated_programs <- paste(names(row), "(", round(row / sum(row) * 100, 1), "%)", sep = "")
       paste(activated_programs, collapse = ", ")
     })
     
-    # Keep only the state and Activated_Programs columns
     program_by_state %>% select(state, Activated_Programs)
   })
   
