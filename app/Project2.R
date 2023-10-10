@@ -10,9 +10,9 @@ library(DT)
 
 # Load your data
 fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
-fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
+cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
 state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
-incident_types <- c("Total", sort(unique(fema_data$incidentType)))
+incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
 
 # UI
 ui <- dashboardPage(
@@ -47,7 +47,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 2,
                     selectInput("incidentType", "Select Incident Type:", choices = incident_types),
-                    selectInput("state_string", "Choose a State:", choices =c(sort(unique(fema_data$state)), "None"))
+                    selectInput("state_string", "Choose a State:", choices =c(sort(unique(cleaned_data$state)), "None"))
                 ),
                 box(leafletOutput("map", height = "450px"), width = 5),
                 box(plotOutput("disasterPieChart", height = "450px"), width = 5)
@@ -55,9 +55,9 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "trend_tab",
               h1("Trend for FEMA data"),
-              selectInput("disaster_type", "Choose a Disaster Type", sort(unique(fema_data$incidentType))),
-              selectInput("state", "Choose a State", c("None", sort(unique(fema_data$state)))),
-              sliderInput("time_range", "Select Time Range:", min = min(fema_data$fyDeclared), max = max(fema_data$fyDeclared), value = c(min(fema_data$fyDeclared), max(fema_data$fyDeclared))),
+              selectInput("disaster_type", "Choose a Disaster Type", sort(unique(cleaned_data$incidentType))),
+              selectInput("state", "Choose a State", c("None", sort(unique(cleaned_data$state)))),
+              sliderInput("time_range", "Select Time Range:", min = min(cleaned_data$fyDeclared), max = max(cleaned_data$fyDeclared), value = c(min(cleaned_data$fyDeclared), max(cleaned_data$fyDeclared))),
               plotlyOutput("linePlot"),
               plotlyOutput("barPlot")
       ),
@@ -65,7 +65,7 @@ ui <- dashboardPage(
       tabItem(tabName = "ProgramActivation_tab",
               h1("Program Activation Analysis"),
               p("To analyze which programs are activated for different types of disasters."),
-              selectInput("disaster_type_2", "Choose a Disaster Type", c("All", sort(unique(fema_data$incidentType)))),
+              selectInput("disaster_type_2", "Choose a Disaster Type", c("All", sort(unique(cleaned_data$incidentType)))),
               checkboxInput("include_tribal", "Include Tribal Requests", FALSE),
               h2("Public Assistance Program (PA)"),
               p("Denotes whether the Public Assistance program was declared for this disaster"),
@@ -103,17 +103,17 @@ server <- function(input, output, session) {
   # For the "Dataset" tab
   output$table <- renderDT({
     datatable(
-      fema_data,
+      cleaned_data %>% select(-designatedArea,-id, -hash),
       options = list(scrollX = TRUE)
     )
   })
   
   # Additional logic from your snippet
-  declaration_counts_total <- fema_data %>%
+  declaration_counts_total <- cleaned_data %>%
     group_by(state) %>%
     summarise(DeclarationCount = n(), .groups = "drop")
   
-  declaration_counts_sub <- fema_data %>%
+  declaration_counts_sub <- cleaned_data %>%
     group_by(state, incidentType) %>%
     summarise(DeclarationCount = n(), .groups = "drop")
   
@@ -155,7 +155,7 @@ server <- function(input, output, session) {
   
   output$disasterPieChart <- renderPlot({
     if (input$state_string == "None"){
-      ggplot(fema_data, aes(x = "", fill = incidentType)) +
+      ggplot(cleaned_data, aes(x = "", fill = incidentType)) +
         geom_bar(width = 1) +
         coord_polar(theta = "y") +
         labs(
@@ -168,7 +168,7 @@ server <- function(input, output, session) {
     }
     
     else
-      {state_data <- fema_data[fema_data$state == input$state_string, ]
+      {state_data <- cleaned_data[cleaned_data$state == input$state_string, ]
         ggplot(state_data, aes(x = "", fill = incidentType)) +
           geom_bar(width = 1) +
           coord_polar(theta = "y") +
@@ -184,7 +184,7 @@ server <- function(input, output, session) {
   
   #For the trends tab 
   output$linePlot <- renderPlotly({
-    filtered_data <- fema_data %>%
+    filtered_data <- cleaned_data %>%
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None")) %>%
       group_by(fyDeclared) %>%
       summarise(frequency = n())
@@ -205,7 +205,7 @@ server <- function(input, output, session) {
   })
   
   output$barPlot <- renderPlotly({
-    filtered_data <- fema_data %>%
+    filtered_data <- cleaned_data %>%
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None") & fyDeclared >= input$time_range[1] & fyDeclared <= input$time_range[2]) %>%
       group_by(fyDeclared) %>%
       summarise(frequency = n())
@@ -219,7 +219,7 @@ server <- function(input, output, session) {
   
   #For the program activation tab 
   output$barChart <- renderPlotly({
-    filtered_data <- fema_data
+    filtered_data <- cleaned_data
     if (input$disaster_type_2 != "All") {
       filtered_data <- filtered_data %>% filter(incidentType == input$disaster_type_2)
     }
