@@ -8,13 +8,15 @@ library(plotly)
 library(scales)
 library(lubridate)
 
+library(DT)
 
 # Load your data
-fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
-fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
-incident_types <- c("Total", sort(unique(fema_data$incidentType)))
-state_list <- c(sort(unique(fema_data$state)), "None")
+fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
+state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
+assistance_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/PublicAssistanceApplicantsProgramDeliveries.csv')
+
 
 # UI
 ui <- dashboardPage(
@@ -26,7 +28,7 @@ ui <- dashboardPage(
       menuItem("Declaration Counts", tabName = "declaration_counts", icon = icon("dashboard")),
       menuItem("Trend for FEMA data", tabName = "trend_tab", icon = icon("chart-bar")),
       menuItem("Program Activation Analysis", tabName = "ProgramActivation_tab", icon = icon("exclamation-triangle")),
-      menuItem("Undetermined 3", tabName = "undetermined3", icon = icon("question-circle")),
+      menuItem("Damage Cost", tabName = "damage_cost", icon = icon("compass")),
       menuItem("Business Values and Findings", tabName = "business", icon = icon("briefcase"))
     )
   ),
@@ -43,13 +45,13 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "data",
               h1("Dataset"),
-              DT::dataTableOutput("table")
+              DTOutput("table")
       ),
       tabItem(tabName = "declaration_counts",
               fluidRow(
                 box(width = 2,
                     selectInput("incidentType", "Select Incident Type:", choices = incident_types),
-                    selectInput("state_string", "Choose a State:", choices = state_list)
+                    selectInput("state_string", "Choose a State:", choices =c(sort(unique(cleaned_data$state)), "None"))
                 ),
                 box(leafletOutput("map", height = "450px"), width = 5),
                 box(plotOutput("disasterPieChart", height = "450px"), width = 5)
@@ -57,9 +59,9 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "trend_tab",
               h1("Trend for FEMA data"),
-              selectInput("disaster_type", "Choose a Disaster Type", sort(unique(fema_data$incidentType))),
-              selectInput("state", "Choose a State", c("None", sort(unique(fema_data$state)))),
-              sliderInput("time_range", "Select Time Range:", min = min(fema_data$fyDeclared), max = max(fema_data$fyDeclared), value = c(min(fema_data$fyDeclared), max(fema_data$fyDeclared))),
+              selectInput("disaster_type", "Choose a Disaster Type", sort(unique(cleaned_data$incidentType))),
+              selectInput("state", "Choose a State", c("None", sort(unique(cleaned_data$state)))),
+              sliderInput("time_range", "Select Time Range:", min = min(cleaned_data$fyDeclared), max = max(cleaned_data$fyDeclared), value = c(min(cleaned_data$fyDeclared), max(cleaned_data$fyDeclared))),
               plotlyOutput("linePlot"),
               plotlyOutput("barPlot")
       ),
@@ -67,7 +69,7 @@ ui <- dashboardPage(
       tabItem(tabName = "ProgramActivation_tab",
               h1("Program Activation Analysis"),
               p("To analyze which programs are activated for different types of disasters."),
-              selectInput("disaster_type_2", "Choose a Disaster Type", c("All", sort(unique(fema_data$incidentType)))),
+              selectInput("disaster_type_2", "Choose a Disaster Type", c("All", sort(unique(cleaned_data$incidentType)))),
               checkboxInput("include_tribal", "Include Tribal Requests", FALSE),
               h2("Public Assistance Program (PA)"),
               p("Denotes whether the Public Assistance program was declared for this disaster"),
@@ -85,9 +87,12 @@ ui <- dashboardPage(
               plotlyOutput("barChart")
       ),
       
-      tabItem(tabName = "undetermined3",
-              h1("Undetermined 3"),
-              p("Contents to be added...")
+      tabItem(tabName = "damage_cost",
+              h1("Damage Costs"),
+              selectInput("state1", "Choose a State", sort(unique(assistance_data$stateCode))),
+              selectInput("year", "Choose a Year", sort(unique(assistance_data$fyDeclared))),
+              plotlyOutput("histogram"),
+              plotlyOutput("CostlinePlot"),
       ),
       
       tabItem(tabName = "business",
@@ -225,16 +230,19 @@ server <- function(input, output, session) {
   # ... existing server logic ...
   
   # For the "Dataset" tab
-  output$table <- DT::renderDataTable({
-    fema_data
+  output$table <- renderDT({
+    datatable(
+      cleaned_data %>% select(-designatedArea,-id, -hash),
+      options = list(scrollX = TRUE)
+    )
   })
   
   # Additional logic from your snippet
-  declaration_counts_total <- fema_data %>%
+  declaration_counts_total <- cleaned_data %>%
     group_by(state) %>%
     summarise(DeclarationCount = n(), .groups = "drop")
   
-  declaration_counts_sub <- fema_data %>%
+  declaration_counts_sub <- cleaned_data %>%
     group_by(state, incidentType) %>%
     summarise(DeclarationCount = n(), .groups = "drop")
   
@@ -276,7 +284,7 @@ server <- function(input, output, session) {
   
   output$disasterPieChart <- renderPlot({
     if (input$state_string == "None"){
-      ggplot(fema_data, aes(x = "", fill = incidentType)) +
+      ggplot(cleaned_data, aes(x = "", fill = incidentType)) +
         geom_bar(width = 1) +
         coord_polar(theta = "y") +
         labs(
@@ -289,38 +297,44 @@ server <- function(input, output, session) {
     }
     
     else
-      {state_data <- fema_data[fema_data$state == input$state_string, ]
-    
-    ggplot(state_data, aes(x = "", fill = incidentType)) +
-      geom_bar(width = 1) +
-      coord_polar(theta = "y") +
-      labs(
-        title = paste("Fractions of Natural Disasters in", input$state_string),
-        x = NULL,
-        y = NULL,
-        fill = "Incident Type"  # Changing legend title
-      ) +
-      scale_fill_brewer(palette = "Set3") +
-      theme_minimal()}
+      {state_data <- cleaned_data[cleaned_data$state == input$state_string, ]
+        ggplot(state_data, aes(x = "", fill = incidentType)) +
+          geom_bar(width = 1) +
+          coord_polar(theta = "y") +
+          labs(
+            title = paste("Fractions of Natural Disasters in", input$state_string),
+            x = NULL,
+            y = NULL,
+            fill = "Incident Type"  # Changing legend title
+          ) +
+          scale_fill_brewer(palette = "Set3") +
+          theme_minimal()}
   })
   
   #For the trends tab 
   output$linePlot <- renderPlotly({
-    filtered_data <- fema_data %>%
+    filtered_data <- cleaned_data %>%
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None")) %>%
       group_by(fyDeclared) %>%
       summarise(frequency = n())
-    
+    if(nrow(filtered_data) == 0) {
+      p <- ggplot(filtered_data) +
+        ggtitle("No data available for selected options") +
+        theme_minimal()
+    } else {
+      max_value <- max(filtered_data$frequency)
     p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
       geom_line() +
+      geom_point()+
+      coord_cartesian(ylim = c(0, max_value))+
       ggtitle(paste("Frequency of Selected Incident Type Over Years in", ifelse(input$state == "None", "All States", input$state)))
-    
+    }
     
     ggplotly(p)
   })
   
   output$barPlot <- renderPlotly({
-    filtered_data <- fema_data %>%
+    filtered_data <- cleaned_data %>%
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None") & fyDeclared >= input$time_range[1] & fyDeclared <= input$time_range[2]) %>%
       group_by(fyDeclared) %>%
       summarise(frequency = n())
@@ -334,7 +348,7 @@ server <- function(input, output, session) {
   
   #For the program activation tab 
   output$barChart <- renderPlotly({
-    filtered_data <- fema_data
+    filtered_data <- cleaned_data
     if (input$disaster_type_2 != "All") {
       filtered_data <- filtered_data %>% filter(incidentType == input$disaster_type_2)
     }
@@ -526,6 +540,54 @@ server <- function(input, output, session) {
   })
   
   
+  
+  
+  #histogram
+  output$histogram <- renderPlotly({
+    selected_state <- input$state
+    selected_year <- input$year
+    
+    if (selected_state != "None") {
+      filtered_data <- assistance_data %>%
+        filter(stateCode == selected_state, fyDeclared == selected_year) %>%
+        group_by(incidentType) %>%
+        summarise(TotalDamageCost = sum(totalAppDamageCost))
+      
+      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+        geom_bar(stat = "identity") +
+        ggtitle(paste("Total Damage Costs by Incident Type in", selected_state, "for the Year", selected_year))
+    } else {
+      filtered_data <- assistance_data %>%
+        filter(fyDeclared == selected_year) %>%
+        group_by(stateCode, incidentType) %>%
+        summarise(TotalDamageCost = sum(totalAppDamageCost))
+      
+      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        ggtitle(paste("Total Damage Costs by Incident Type in All States for the Year", selected_year))
+    }
+    
+    ggplotly(p)
+  })
+  
+  #cost plot
+  output$CostlinePlot <- renderPlotly({
+    selected_state <- input$state1
+    
+    filtered_data <- assistance_data %>%
+      filter(stateCode == selected_state) %>%
+      group_by(fyDeclared) %>%
+      summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
+      ungroup() %>%
+      arrange(fyDeclared)
+    
+    p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
+      geom_line() +
+      geom_point() +
+      ggtitle(paste("Total Damage Costs Over Years in", selected_state))
+    
+    ggplotly(p)
+  })
   
   
 }
