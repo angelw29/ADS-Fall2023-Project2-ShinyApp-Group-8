@@ -6,6 +6,8 @@ library(leaflet)
 library(tidyverse)
 library(plotly)
 library(scales)
+library(lubridate)
+
 
 # Load your data
 fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
@@ -89,13 +91,135 @@ ui <- dashboardPage(
       ),
       
       tabItem(tabName = "business",
-              h1("Business Values and Findings"),
-              p("In this section, we discuss...")
+              h1("Business Value"),
+              
+              tags$head(
+                tags$style(HTML("
+            .carousel-inner img {
+              width: 100%;
+              max-height: 400px;
+            }
+          "))
+              ),
+              
+              tags$div(id = "myCarousel", class = "carousel slide", `data-ride` = "carousel",
+                       tags$ol(class = "carousel-indicators",
+                               tags$li(`data-target` = "#myCarousel", `data-slide-to` = "0", class = "active"),
+                               tags$li(`data-target` = "#myCarousel", `data-slide-to` = "1"),
+                               tags$li(`data-target` = "#myCarousel", `data-slide-to` = "2"),
+                               tags$li(`data-target` = "#myCarousel", `data-slide-to` = "3"),
+                               tags$li(`data-target` = "#myCarousel", `data-slide-to` = "4")
+                       ),
+                       
+                       tags$div(class = "carousel-inner",
+                                tags$div(class = "item active",
+                                         tags$img(src = "https://d.newsweek.com/en/full/2018680/tornado.jpg", alt = "Image 1"),
+                                         tags$div(class = "carousel-caption",
+                                                  tags$h3("Tornado in Indiana, Arkansas", style = "position: absolute; bottom: 0; right: 0;")
+                                         )
+                                ),
+                                tags$div(class = "item",
+                                         tags$img(src = " https://mynorthwest.com/wp-content/uploads/2022/09/BoltCreekFire.jpg", alt = "Image 2"),
+                                         tags$div(class = "carousel-caption",
+                                                  tags$h3("Bolt Creek Fire", style = "position: absolute; bottom: 0; right: 0;")
+                                         )
+                                ),
+                                tags$div(class = "item",
+                                         tags$img(src = "https://www.snexplores.org/wp-content/uploads/2019/11/main_anchorage-street.jpg", alt = "Image 3"),
+                                         tags$div(class = "carousel-caption",
+                                                  tags$h3("1964 Alaska Earthquake", style = "position: absolute; bottom: 0; right: 0;")
+                                         )
+                                ),
+                                tags$div(class = "item",
+                                         tags$img(src = "https://dynaimage.cdn.cnn.com/cnn/c_fill,g_auto,w_1200,h_675,ar_16:9/https%3A%2F%2Fcdn.cnn.com%2Fcnnnext%2Fdam%2Fassets%2F201112174300-hiddenite-north-carollna-flooding.jpg", alt = "Image 4"),
+                                         tags$div(class = "carousel-caption",
+                                                  tags$h3("Flood in North Carolina", style = "position: absolute; bottom: 0; right: 0;")
+                                         )
+                                ),
+                                tags$div(class = "item",
+                                         tags$img(src = "https://i.ytimg.com/vi/jWHu-MJd3YQ/maxresdefault.jpg", alt = "Image 5"),
+                                         tags$div(class = "carousel-caption",
+                                                  tags$h3("Snowstorm in Buffalo", style = "position: absolute; bottom: 0; right: 0;")
+                                         )
+                                )
+                       ),
+                       tags$a(class = "left carousel-control", href = "#myCarousel", `data-slide` = "prev",
+                              tags$span(class = "glyphicon glyphicon-chevron-left"),
+                              tags$span(class = "sr-only", "Previous")
+                       ),
+                       tags$a(class = "right carousel-control", href = "#myCarousel", `data-slide` = "next",
+                              tags$span(class = "glyphicon glyphicon-chevron-right"),
+                              tags$span(class = "sr-only", "Next")
+                       )
+              ),
+              
+             
+              h4("About"),
+              p("The tool can be used to answer many interesting questions and explore trends. A user could analyze trends in the frequency and types of disasters over years or decades. It can also be used to identify areas more prone to certain types of disasters. By looking at which programs are most often activated, and understanding how often Tribal Nations independently request assistance we can get insights into the unique needs and challenges of these communities. Experts can use these insights to make recommendations for resource allocation."),
+              h4("Importance"),
+              p("The dataset offers crucial details on the different types of disasters, and the response procedures that were activated. This data can be extremely important, for emergency management agencies, policy makers, and even companies who have to be prepared for such catastrophes. This can offer insights into how different disasters trigger different types of aid and responses. It can also be intriguing for academic research, particularly in areas like public policy, sociology, and environmental science."),
+              
+              h1("Findings"),
+              p("The tool offers a multi-faceted analysis of disaster data, providing insights into the frequency and types of incidents over time. It also sheds light on government response measures, specifically which programs are most frequently activated during disasters.  It also shows seasonal and geographical insights, helping to identify trends and patterns that are crucial for disaster preparedness and management."),
+              
+              box(
+                title = "Insights on the Data",
+                status = "primary",
+                solidHeader = TRUE,
+                collapsible = TRUE,
+                width = 12,
+                h3("Size of the Data"),
+                textOutput("dataSize"),
+                h3("Total Number of Disasters Every Year"),
+                plotOutput("disastersPerYear"),
+                p("1958 had the lowest number of disasters"),
+                p("2020 had the highest number of disasters "),
+                h3("Disaster Types"),
+                p("Number of Disaster Types"),
+                textOutput("numIncidentTypes"),
+                tableOutput("incidentTypes")
+              ),
+              
+              box(
+                title = "State-Specific Insights",
+                status = "primary",
+                solidHeader = TRUE,
+                collapsible = TRUE,
+                width = 12,
+                uiOutput("stateInsights"),
+                div(style = "overflow-x: auto;",  
+                    tableOutput("incidentStateTable")),
+              ),
+              
+              box(
+                title = "Seasonal Insights",
+                status = "primary",
+                solidHeader = TRUE,
+                collapsible = TRUE,
+                width = 12,
+                h1("Seasonal Trends in Disasters"),
+                plotOutput("seasonalTrendsPlot"),
+                textOutput("seasonalInsights")
+              ),
+              
+              box(
+                title = "Program Activation Insights",
+                status = "primary",
+                solidHeader = TRUE,
+                collapsible = TRUE,
+                width = 12,
+                box(title = "Tribal Requests", width = 6, textOutput("tribalRequests")),
+                box(title = "Program Activation Stats", width = 6, textOutput("mostCommonProgram")),
+                tableOutput("stateProgramTable")
+              )
+    
+              
       )
+      
+      
     )
   )
 )
-
 # SERVER
 server <- function(input, output, session) {
   # ... existing server logic ...
@@ -231,7 +355,6 @@ server <- function(input, output, session) {
     ggplotly(p)
   })
   
-  # Pie Chart
   output$pieChart <- renderPlotly({
     filtered_data <- fema_data
     if (input$disaster_type_2 != "All") {
@@ -252,6 +375,157 @@ server <- function(input, output, session) {
     plot_ly(program_data_long, labels = ~variable, values = ~value, type = 'pie') %>%
       layout(title = "Proportion of Each Program Activated")
   })
+  
+  #For the Findings tab
+  output$dataSize <- renderText({
+    paste(nrow(fema_data), " rows")
+  })
+  
+  
+  output$disastersPerYear <- renderPlot({
+    yearly_data <- fema_data %>%
+      group_by(fyDeclared) %>%
+      summarise(total_disasters = n()) %>%
+      arrange(desc(total_disasters))
+    
+    highest_year <- yearly_data[1,]
+    lowest_year <- yearly_data[nrow(yearly_data),]
+    
+    ggplot(yearly_data, aes(x = fyDeclared, y = total_disasters)) +
+      geom_bar(stat = "identity") +
+      geom_text(aes(label = total_disasters), vjust = -0.5) +
+      annotate("text", x = highest_year$fyDeclared, y = highest_year$total_disasters, label = "Highest", color = "red") +
+      annotate("text", x = lowest_year$fyDeclared, y = lowest_year$total_disasters, label = "Lowest", color = "blue") +
+      scale_x_continuous(breaks = seq(min(yearly_data$fyDeclared), max(yearly_data$fyDeclared), by = 5))
+  })
+  
+  output$numIncidentTypes <- renderText({
+    num_types <- n_distinct(fema_data$incidentType)
+    return(num_types)
+  })
+  
+  output$incidentTypes <- renderTable({
+    incident_data <- fema_data %>%
+      group_by(incidentType) %>%
+      summarise(total_incidents = n()) %>%
+      arrange(desc(total_incidents))
+    
+    highest_incident <- incident_data[1,]
+    lowest_incident <- incident_data[nrow(incident_data),]
+    
+    incident_data$Highlight <- ""
+    incident_data$Highlight[incident_data$incidentType == highest_incident$incidentType] <- "Highest"
+    incident_data$Highlight[incident_data$incidentType == lowest_incident$incidentType] <- "Lowest"
+    
+    incident_data
+  })
+  
+  output$stateInsights <- renderUI({
+    # Group the data by state and count the number of disasters
+    state_data <- fema_data %>%
+      group_by(state) %>%
+      summarise(total_disasters = n()) %>%
+      arrange(desc(total_disasters))
+    
+    highest_state <- state_data[1,]
+    lowest_state <- state_data[nrow(state_data),]
+    
+    tagList(
+      tags$ul(
+        tags$li(style = "color:black;", paste("State with Highest number of disasters: ", highest_state$state, " with ", highest_state$total_disasters, " disasters")),
+        tags$li(style = "color:black;", paste("State with Lowest number of disasters: ", lowest_state$state, " with ", lowest_state$total_disasters, " disasters"))
+      )
+    )
+  })
+  
+  output$incidentStateTable <- renderTable({
+    incident_state_data <- fema_data %>%
+      group_by(state, incidentType) %>%
+      summarise(total_incidents = n())
+    
+    spread_data <- spread(incident_state_data, key = incidentType, value = total_incidents)
+    
+    spread_data
+  })
+  
+  output$seasonalTrendsPlot <- renderPlot({
+    fema_data$month <- lubridate::month(lubridate::ymd_hms(fema_data$declarationDate), label = TRUE)
+    monthly_data <- fema_data %>%
+      group_by(month) %>%
+      summarise(total_disasters = n()) %>%
+      arrange(desc(total_disasters))
+    
+    ggplot(monthly_data, aes(x = month, y = total_disasters)) +
+      geom_bar(stat = "identity") +
+      ggtitle("Total Number of Disasters by Month")
+  })
+  
+  output$seasonalInsights <- renderText({
+    fema_data$month <- lubridate::month(lubridate::ymd_hms(fema_data$declarationDate), label = TRUE)
+    monthly_data <- fema_data %>%
+      group_by(month) %>%
+      summarise(total_disasters = n()) %>%
+      arrange(desc(total_disasters))
+    
+    highest_month <- monthly_data$month[which.max(monthly_data$total_disasters)]
+    lowest_month <- monthly_data$month[which.min(monthly_data$total_disasters)]
+    
+    paste(highest_month, "has the highest number of disasters.", lowest_month, "has the lowest number of disasters.")
+  })
+  
+  output$tribalRequests <- renderText({
+    total_disasters <- nrow(fema_data)
+    tribal_requests <- sum(fema_data$tribalRequest == 1)
+    percentage_tribal <- (tribal_requests / total_disasters) * 100
+    paste("Percentage of disasters with Tribal Requests: ", round(percentage_tribal, 2), "%")
+  })
+  
+  output$mostCommonProgram <- renderText({
+    # Summing up the program activations
+    program_data <- fema_data %>% 
+      summarise(
+        IH = sum(ihProgramDeclared, na.rm = TRUE),
+        IA = sum(iaProgramDeclared, na.rm = TRUE),
+        PA = sum(paProgramDeclared, na.rm = TRUE),
+        HM = sum(hmProgramDeclared, na.rm = TRUE)
+      )
+    
+    # Finding the most commonly activated program
+    most_common_program <- names(which.max(unlist(program_data)))
+    
+    paste("Most commonly activated program for disasters:", most_common_program, "(Public Assistance Program)")
+  })
+  
+  output$stateProgramTable <- renderTable({
+    program_by_state <- fema_data %>%
+      group_by(state) %>%
+      summarise(
+        IH = sum(ihProgramDeclared, na.rm = TRUE),
+        IA = sum(iaProgramDeclared, na.rm = TRUE),
+        PA = sum(paProgramDeclared, na.rm = TRUE),
+        HM = sum(hmProgramDeclared, na.rm = TRUE)
+      )
+    
+    # Calculate the total number of program activations for each state
+    program_by_state$Total = rowSums(program_by_state[-1], na.rm = TRUE)
+    
+    # Calculate the percentage of each program activated
+    program_by_state$IH_Percent = (program_by_state$IH / program_by_state$Total) * 100
+    program_by_state$IA_Percent = (program_by_state$IA / program_by_state$Total) * 100
+    program_by_state$PA_Percent = (program_by_state$PA / program_by_state$Total) * 100
+    program_by_state$HM_Percent = (program_by_state$HM / program_by_state$Total) * 100
+    
+    # Create a new column that concatenates the names of the activated programs and their percentages
+    program_by_state$Activated_Programs <- apply(program_by_state[, 2:5], 1, function(row) {
+      activated_programs <- paste(names(row), "(", round(row / sum(row) * 100, 1), "%)", sep = "")
+      paste(activated_programs, collapse = ", ")
+    })
+    
+    # Keep only the state and Activated_Programs columns
+    program_by_state %>% select(state, Activated_Programs)
+  })
+  
+  
   
   
 }
