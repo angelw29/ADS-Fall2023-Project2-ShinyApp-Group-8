@@ -13,6 +13,8 @@ fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Proje
 cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
 state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
 incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
+assistance_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/PublicAssistanceApplicantsProgramDeliveries.csv')
+
 
 # UI
 ui <- dashboardPage(
@@ -24,7 +26,7 @@ ui <- dashboardPage(
       menuItem("Declaration Counts", tabName = "declaration_counts", icon = icon("dashboard")),
       menuItem("Trend for FEMA data", tabName = "trend_tab", icon = icon("chart-bar")),
       menuItem("Program Activation Analysis", tabName = "ProgramActivation_tab", icon = icon("exclamation-triangle")),
-      menuItem("Undetermined 3", tabName = "undetermined3", icon = icon("question-circle")),
+      menuItem("Damage Cost", tabName = "damage_cost", icon = icon("compass")),
       menuItem("Business Values and Findings", tabName = "business", icon = icon("briefcase"))
     )
   ),
@@ -83,9 +85,12 @@ ui <- dashboardPage(
               plotlyOutput("barChart")
       ),
       
-      tabItem(tabName = "undetermined3",
-              h1("Undetermined 3"),
-              p("Contents to be added...")
+      tabItem(tabName = "damage_cost",
+              h1("Damage Costs"),
+              selectInput("state1", "Choose a State", sort(unique(assistance_data$stateCode))),
+              selectInput("year", "Choose a Year", sort(unique(assistance_data$fyDeclared))),
+              plotlyOutput("histogram"),
+              plotlyOutput("CostlinePlot"),
       ),
       
       tabItem(tabName = "business",
@@ -260,6 +265,54 @@ server <- function(input, output, session) {
     
     plot_ly(program_data_long, labels = ~variable, values = ~value, type = 'pie') %>%
       layout(title = "Proportion of Each Program Activated")
+  })
+  
+  
+  #histogram
+  output$histogram <- renderPlotly({
+    selected_state <- input$state
+    selected_year <- input$year
+    
+    if (selected_state != "None") {
+      filtered_data <- assistance_data %>%
+        filter(stateCode == selected_state, fyDeclared == selected_year) %>%
+        group_by(incidentType) %>%
+        summarise(TotalDamageCost = sum(totalAppDamageCost))
+      
+      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+        geom_bar(stat = "identity") +
+        ggtitle(paste("Total Damage Costs by Incident Type in", selected_state, "for the Year", selected_year))
+    } else {
+      filtered_data <- assistance_data %>%
+        filter(fyDeclared == selected_year) %>%
+        group_by(stateCode, incidentType) %>%
+        summarise(TotalDamageCost = sum(totalAppDamageCost))
+      
+      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        ggtitle(paste("Total Damage Costs by Incident Type in All States for the Year", selected_year))
+    }
+    
+    ggplotly(p)
+  })
+  
+  #cost plot
+  output$CostlinePlot <- renderPlotly({
+    selected_state <- input$state1
+    
+    filtered_data <- assistance_data %>%
+      filter(stateCode == selected_state) %>%
+      group_by(fyDeclared) %>%
+      summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
+      ungroup() %>%
+      arrange(fyDeclared)
+    
+    p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
+      geom_line() +
+      geom_point() +
+      ggtitle(paste("Total Damage Costs Over Years in", selected_state))
+    
+    ggplotly(p)
   })
   
   
