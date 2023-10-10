@@ -5,11 +5,12 @@ library(ggplot2)
 library(leaflet)
 library(tidyverse)
 library(plotly)
+library(scales)
 
 # Load your data
-fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
 fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
 incident_types <- c("Total", sort(unique(fema_data$incidentType)))
 state_list <- c(sort(unique(fema_data$state)), "None")
 
@@ -21,8 +22,8 @@ ui <- dashboardPage(
       menuItem("Introduction", tabName = "intro", icon = icon("info-circle")),
       menuItem("Dataset", tabName = "data", icon = icon("table")),
       menuItem("Declaration Counts", tabName = "declaration_counts", icon = icon("dashboard")),
-      menuItem("Trend for FEMA data", tabName = "trend_tab", icon = icon("question-circle")),
-      menuItem("Undetermined 2", tabName = "undetermined2", icon = icon("question-circle")),
+      menuItem("Trend for FEMA data", tabName = "trend_tab", icon = icon("chart-bar")),
+      menuItem("Program Activation Analysis", tabName = "ProgramActivation_tab", icon = icon("exclamation-triangle")),
       menuItem("Undetermined 3", tabName = "undetermined3", icon = icon("question-circle")),
       menuItem("Business Values and Findings", tabName = "business", icon = icon("briefcase"))
     )
@@ -60,15 +61,33 @@ ui <- dashboardPage(
               plotlyOutput("linePlot"),
               plotlyOutput("barPlot")
       ),
-      
-      tabItem(tabName = "undetermined2",
-              h1("Undetermined 2"),
-              p("Contents to be added...")
+        
+      tabItem(tabName = "ProgramActivation_tab",
+              h1("Program Activation Analysis"),
+              p("To analyze which programs are activated for different types of disasters."),
+              selectInput("disaster_type_2", "Choose a Disaster Type", c("All", sort(unique(fema_data$incidentType)))),
+              checkboxInput("include_tribal", "Include Tribal Requests", FALSE),
+              h2("Public Assistance Program (PA)"),
+              p("Denotes whether the Public Assistance program was declared for this disaster"),
+              p("Through the PA Program, FEMA provides supplemental Federal grant assistance for debris removal, emergency protective measures, and the restoration of disaster-damaged, publicly owned facilities and specific facilities of certain Private Non-Profit organizations."),
+              h2("Hazard Mitigation program (HA)"),
+              p("Denotes whether the Hazard Mitigation program was declared for this disaster."),
+              p("The FEMA Hazard Mitigation Grant Program provides funding to state, local, tribal, and territorial governments to develop hazard mitigation plans and rebuild in ways that reduce future disaster losses. The program emphasizes long-term risk reduction measures, including planning, acquisition of hazard-prone properties, flood protection, retrofitting, and construction projects to make communities more resilient."),
+              h2("Individual Assistance Program (IA)"),
+              p("Denotes whether the Individual Assistance program was declared for this disaster."),
+              p("provides financial and direct services to eligible individuals affected by a disaster, who have uninsured or under-insured necessary expenses and serious needs."),
+              h2("Individuals and Households Program (IH)"),
+              p("Denotes whether the Individuals and Households program was declared for this disaster."),
+              p("The program provides financial and direct services to eligible individuals and households affected by a disaster, who have uninsured or under-insured necessary expenses and serious needs."),
+              plotlyOutput("pieChart"),
+              plotlyOutput("barChart")
       ),
+      
       tabItem(tabName = "undetermined3",
               h1("Undetermined 3"),
               p("Contents to be added...")
       ),
+      
       tabItem(tabName = "business",
               h1("Business Values and Findings"),
               p("In this section, we discuss...")
@@ -161,7 +180,7 @@ server <- function(input, output, session) {
       theme_minimal()}
   })
   
-  
+  #For the trends tab 
   output$linePlot <- renderPlotly({
     filtered_data <- fema_data %>%
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None")) %>%
@@ -188,7 +207,53 @@ server <- function(input, output, session) {
     
     ggplotly(p)
   })
-
+  
+  #For the program activation tab 
+  output$barChart <- renderPlotly({
+    filtered_data <- fema_data
+    if (input$disaster_type_2 != "All") {
+      filtered_data <- filtered_data %>% filter(incidentType == input$disaster_type_2)
+    }
+    if (!input$include_tribal) {
+      filtered_data <- filtered_data %>% filter(tribalRequest == 0)
+    }
+    program_data <- filtered_data %>% 
+      summarise(IH = sum(ihProgramDeclared),
+                IA = sum(iaProgramDeclared),
+                PA = sum(paProgramDeclared),
+                HM = sum(hmProgramDeclared))
+    
+    p <- ggplot(tidyr::pivot_longer(program_data, cols = everything(), names_to = "variable", values_to = "value"), aes(x = variable, y = value)) +
+      geom_bar(stat = "identity") +
+      ggtitle("Number of Times Each Program is Activated")
+    
+    
+    ggplotly(p)
+  })
+  
+  # Pie Chart
+  output$pieChart <- renderPlotly({
+    filtered_data <- fema_data
+    if (input$disaster_type_2 != "All") {
+      filtered_data <- filtered_data %>% filter(incidentType == input$disaster_type_2)
+    }
+    if (!input$include_tribal) {
+      filtered_data <- filtered_data %>% filter(tribalRequest == 0)
+    }
+    
+    program_data <- filtered_data %>% 
+      summarise(IH = sum(ihProgramDeclared),
+                IA = sum(iaProgramDeclared),
+                PA = sum(paProgramDeclared),
+                HM = sum(hmProgramDeclared))
+    
+    program_data_long <- tidyr::pivot_longer(program_data, cols = everything(), names_to = "variable", values_to = "value")
+    
+    plot_ly(program_data_long, labels = ~variable, values = ~value, type = 'pie') %>%
+      layout(title = "Proportion of Each Program Activated")
+  })
+  
+  
 }
 
 # Run the application
