@@ -7,10 +7,11 @@ library(tidyverse)
 library(plotly)
 
 # Load your data
-fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
 fema_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
-incident_types <- c("Total", unique(fema_data$incidentType))
+state_coords <- read.csv("/Users/angelwang/Desktop/fall 2023/4243/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+incident_types <- c("Total", sort(unique(fema_data$incidentType)))
+state_list <- c(sort(unique(fema_data$state)), "None")
 
 # UI
 ui <- dashboardPage(
@@ -40,7 +41,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(width = 2,
                     selectInput("incidentType", "Select Incident Type:", choices = incident_types),
-                    selectInput("state_string", "Choose a State:", choices = unique(fema_data$state))
+                    selectInput("state_string", "Choose a State:", choices = state_list)
                 ),
                 box(leafletOutput("map", height = "450px"), width = 5),
                 box(plotOutput("disasterPieChart", height = "450px"), width = 5)
@@ -126,7 +127,21 @@ server <- function(input, output, session) {
   })
   
   output$disasterPieChart <- renderPlot({
-    state_data <- fema_data[fema_data$state == input$state_string, ]
+    if (input$state_string == "None"){
+      ggplot(fema_data, aes(x = "", fill = incidentType)) +
+        geom_bar(width = 1) +
+        coord_polar(theta = "y") +
+        labs(
+          title = paste("Fractions of Natural Disasters in", input$state_string),
+          x = NULL,
+          y = NULL,
+          fill = "Incident Type"  # Changing legend title
+        ) +
+        theme_minimal()
+    }
+    
+    else
+      {state_data <- fema_data[fema_data$state == input$state_string, ]
     
     ggplot(state_data, aes(x = "", fill = incidentType)) +
       geom_bar(width = 1) +
@@ -138,7 +153,7 @@ server <- function(input, output, session) {
         fill = "Incident Type"  # Changing legend title
       ) +
       scale_fill_brewer(palette = "Set3") +
-      theme_minimal()
+      theme_minimal()}
   })
   
   
