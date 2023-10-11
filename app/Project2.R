@@ -11,11 +11,11 @@ library(lubridate)
 library(DT)
 
 # Load your data
-fema_data = read.csv('/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('../data/DisasterDeclarationsSummaries.csv')
 cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("/Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/states.csv")
+state_coords <- read.csv("../data/states.csv")
 incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
-assistance_data = read.csv('//Users/mansi/Desktop/Fall 2023/Applied Data Science/ADS-Fall2023-Project2-ShinyApp-Group-8/data/PublicAssistanceApplicantsProgramDeliveries.csv')
+assistance_data = read.csv('../data/PublicAssistanceApplicantsProgramDeliveries.csv')
 
 
 # UI
@@ -89,7 +89,7 @@ ui <- dashboardPage(
       
       tabItem(tabName = "damage_cost",
               h1("Damage Costs"),
-              selectInput("state1", "Choose a State", sort(unique(assistance_data$stateCode))),
+              selectInput("state1", "Choose a State", c("All", sort(unique(assistance_data$stateCode)))),
               selectInput("year", "Choose a Year", sort(unique(assistance_data$fyDeclared))),
               plotlyOutput("histogram"),
               plotlyOutput("CostlinePlot"),
@@ -539,47 +539,82 @@ server <- function(input, output, session) {
   
   #histogram
   output$histogram <- renderPlotly({
-    selected_state <- input$state
+    selected_state <- input$state1
     selected_year <- input$year
     
-    if (selected_state != "None") {
+    if (selected_state != "All") {
       filtered_data <- assistance_data %>%
         filter(stateCode == selected_state, fyDeclared == selected_year) %>%
         group_by(incidentType) %>%
         summarise(TotalDamageCost = sum(totalAppDamageCost))
+      if(nrow(filtered_data) == 0) {
+        p <- ggplot(filtered_data) +
+          ggtitle("No data available for selected options") +
+          theme_minimal()
+      } else {
       
       p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
         geom_bar(stat = "identity") +
-        ggtitle(paste("Total Damage Costs by Incident Type in", selected_state, "for the Year", selected_year))
-    } else {
+        labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
+        scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
+        coord_flip()+
+        ggtitle(paste("Total Damage Costs by Incident Type in", selected_state, "for the Year",selected_year))+
+        theme(plot.title = element_text(hjust = 0.5))
+    } 
+      }
+    else {
       filtered_data <- assistance_data %>%
         filter(fyDeclared == selected_year) %>%
         group_by(stateCode, incidentType) %>%
         summarise(TotalDamageCost = sum(totalAppDamageCost))
       
-      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        ggtitle(paste("Total Damage Costs by Incident Type in All States for the Year", selected_year))
-    }
-    
-    ggplotly(p)
+        p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
+          scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
+          coord_flip()+
+          ggtitle(paste("Total Damage Costs by Incident Type in the US for the Year", selected_year))+
+          theme(plot.title = element_text(hjust = 0.5))
+      }
+      ggplotly(p)
   })
   
   #cost plot
   output$CostlinePlot <- renderPlotly({
     selected_state <- input$state1
+    if (selected_state != "All"){
+      filtered_data <- assistance_data %>%
+        filter(stateCode == selected_state) %>%
+        group_by(fyDeclared) %>%
+        summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
+        ungroup() %>%
+        arrange(fyDeclared)
+      
+      p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
+        geom_line() +
+        geom_point() +
+        labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
+        scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
+        ggtitle(paste("Total Damage Costs Over Years in", selected_state))+
+        theme(plot.title = element_text(hjust = 0.5))
+    } else{
+      filtered_data <- assistance_data %>%
+        group_by(fyDeclared) %>%
+        summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
+        ungroup() %>%
+        arrange(fyDeclared)
+      
+      p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
+        geom_line() +
+        geom_point() +
+        labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
+        scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
+        ggtitle(paste("Total Damage Costs Over Years in the US"))+
+        theme(plot.title = element_text(hjust = 0.5))
+      
+    }
     
-    filtered_data <- assistance_data %>%
-      filter(stateCode == selected_state) %>%
-      group_by(fyDeclared) %>%
-      summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
-      ungroup() %>%
-      arrange(fyDeclared)
     
-    p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
-      geom_line() +
-      geom_point() +
-      ggtitle(paste("Total Damage Costs Over Years in", selected_state))
     
     ggplotly(p)
   })
