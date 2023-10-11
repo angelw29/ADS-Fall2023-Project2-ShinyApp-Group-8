@@ -3,7 +3,7 @@ Term: Fall 2023
 
 ### [Project Description](doc/project2_desc.md)
 
-(doc/figs/intro_page.png)
+![screenshot](doc/figs/intro_page.png)
 
 + Team - Group 8
 + Team members
