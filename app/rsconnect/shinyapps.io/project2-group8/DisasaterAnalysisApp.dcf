@@ -1,0 +1,10 @@
+name: DisasaterAnalysisApp
+title:
+username: project2-group8
+account: project2-group8
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10160386
+bundleId: 7790517
+url: https://project2-group8.shinyapps.io/DisasaterAnalysisApp/
+version: 1
