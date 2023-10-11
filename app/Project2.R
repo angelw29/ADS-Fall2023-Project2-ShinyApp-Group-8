@@ -291,7 +291,7 @@ server <- function(input, output, session) {
           title = paste("Fractions of Natural Disasters in", input$state_string),
           x = NULL,
           y = NULL,
-          fill = "Incident Type"  # Changing legend title
+          fill = "Incident Type"  
         ) +
         theme_minimal()
     }
@@ -305,7 +305,7 @@ server <- function(input, output, session) {
             title = paste("Fractions of Natural Disasters in", input$state_string),
             x = NULL,
             y = NULL,
-            fill = "Incident Type"  # Changing legend title
+            fill = "Incident Type"  
           ) +
           scale_fill_brewer(palette = "Set3") +
           theme_minimal()}
@@ -327,7 +327,10 @@ server <- function(input, output, session) {
       geom_line() +
       geom_point()+
       coord_cartesian(ylim = c(0, max_value))+
-      ggtitle(paste("Frequency of Selected Incident Type Over Years in", ifelse(input$state == "None", "All States", input$state)))
+      ggtitle(paste("Frequency of Selected Incident Type Over Years in", ifelse(input$state == "None", "All States", input$state))) +
+      xlab("Years")+
+      ylab("Frequency")
+    
     }
     
     ggplotly(p)
@@ -341,7 +344,9 @@ server <- function(input, output, session) {
     
     p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
       geom_bar(stat = "identity") +
-      ggtitle(paste("Frequency of Selected Incident Type Over Specified Time Range in", ifelse(input$state == "None", "All States", input$state)))
+      ggtitle(paste("Frequency of Selected Incident Type Over Specified Time Range in", ifelse(input$state == "None", "All States", input$state))) +
+      xlab("Years")+
+      ylab("Frequency")
     
     ggplotly(p)
   })
@@ -363,7 +368,9 @@ server <- function(input, output, session) {
     
     p <- ggplot(tidyr::pivot_longer(program_data, cols = everything(), names_to = "variable", values_to = "value"), aes(x = variable, y = value)) +
       geom_bar(stat = "identity") +
-      ggtitle("Number of Times Each Program is Activated")
+      ggtitle("Number of Times Each Program is Activated")+
+      xlab("Types of Programs")+
+      ylab("Count")
     
     
     ggplotly(p)
@@ -410,7 +417,9 @@ server <- function(input, output, session) {
       geom_text(aes(label = total_disasters), vjust = -0.5) +
       annotate("text", x = highest_year$fyDeclared, y = highest_year$total_disasters, label = "Highest", color = "red") +
       annotate("text", x = lowest_year$fyDeclared, y = lowest_year$total_disasters, label = "Lowest", color = "blue") +
-      scale_x_continuous(breaks = seq(min(yearly_data$fyDeclared), max(yearly_data$fyDeclared), by = 5))
+      scale_x_continuous(breaks = seq(min(yearly_data$fyDeclared), max(yearly_data$fyDeclared), by = 5))+
+      xlab("Years")+
+      ylab("Count")
   })
   
   output$numIncidentTypes <- renderText({
@@ -470,7 +479,9 @@ server <- function(input, output, session) {
     
     ggplot(monthly_data, aes(x = month, y = total_disasters)) +
       geom_bar(stat = "identity") +
-      ggtitle("Total Number of Disasters by Month")
+      ggtitle("Total Number of Disasters by Month")+
+      xlab("Months")+
+      ylab("Count")
   })
   
   output$seasonalInsights <- renderText({
