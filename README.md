@@ -1,12 +1,12 @@
 ## Project Title - Disaster Analysis and Visualization App: A Data-Driven Approach to Emergency Management
 Term: Fall 2023
 
-+ Team #
++ Team - Group 8
 + **Projec title**: + Team members
-	+ team member 1: Angel Wang
-	+ team member 2: Haixin Shu
-	+ team member 3: Yufei Wang
-	+ team member 4: Mansi Singh
+	+ Angel Wang
+	+ Haixin Shu
+	+ Yufei Wang
+	+ Mansi Singh
 	
 
 + **Project summary**: The Disaster Analysis and Visualization app offers a data-driven approach to understanding the patterns, impacts, damange costs and responses to various types disasters in the United States. The project uses a Shiny app to illustrate trends over time, geographic distribution, and the activation of emergency response systems using a rich dataset from FEMA. The app features multiple interactive tabs that allow users to filter data by state, time period, and disaster type, providing valuable insights for emergency management agencies, policymakers, and researchers.
