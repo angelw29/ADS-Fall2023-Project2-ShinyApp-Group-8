@@ -15,6 +15,18 @@ Term: Fall 2023
 
 + **Contribution statement**: ([default](doc/a_note_on_contributions.md)) All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
 
+- All members designed the study.
+- Angel contributes to the introduction page and most data cleaning for the App
+- Haixin and Angel contributes to dataset page.
+- Angel and Haixin contributes to declaration counts page.
+- Angel, Mansi and Haixin contributes to Trend page in the App
+- Mansi contributes to the program activation analysis page 
+- Yufei and Angel contributes to Damage Cost page
+- Mansi contributes to Business Values change page mostly and Yufei assisted
+- Angel contributes to References page
+- All team members help to debug the code
+
+
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
 ```

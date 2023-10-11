@@ -10,11 +10,11 @@ library(lubridate)
 library(DT)
 
 # Load your data
-fema_data = read.csv('DisasterDeclarationsSummaries.csv')
+fema_data = read.csv('data/DisasterDeclarationsSummaries.csv')
 cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
-state_coords <- read.csv("states.csv")
+state_coords <- read.csv("data/states.csv")
 incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
-assistance_data = read.csv('PublicAssistanceApplicantsProgramDeliveries.csv')
+assistance_data = read.csv('data/PublicAssistanceApplicantsProgramDeliveries.csv')
 
 
 # UI
@@ -232,7 +232,7 @@ ui <- dashboardPage(
           h4('Mansi Singh'),
           h4('Angel Wang'),
           h4('Yufei Wang'),
-          h2("GitHub Repository"),
+          h2("Our Project"),
           HTML("<p>Shinyapp Link: <a href='https://project2-group8.shinyapps.io/DisasterAnalysisApp/'>Group 8</a></p>")
           
         )
