@@ -1,0 +1,10 @@
+name: DisasterAnalysis-VisualizationApp
+title:
+username: project2-group8
+account: project2-group8
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10164317
+bundleId: 7791574
+url: https://project2-group8.shinyapps.io/DisasterAnalysis-VisualizationApp/
+version: 1
