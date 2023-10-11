@@ -89,7 +89,7 @@ ui <- dashboardPage(
       
       tabItem(tabName = "damage_cost",
               h1("Damage Costs"),
-              selectInput("state1", "Choose a State", c("All", sort(unique(assistance_data$stateCode)))),
+              selectInput("state1", "Choose a State", c("None", sort(unique(assistance_data$stateCode)))),
               selectInput("year", "Choose a Year", sort(unique(assistance_data$fyDeclared))),
               plotOutput("histogram"),
               plotlyOutput("CostlinePlot"),
@@ -233,7 +233,7 @@ ui <- dashboardPage(
           h4('Angel Wang'),
           h4('Yufei Wang'),
           h2("GitHub Repository"),
-          HTML("<p>Team Github Link: <a href='https://github.com/angelw29/ADS-Fall2023-Project2-ShinyApp-Group-8/tree/master'>Group 8</a></p>")
+          HTML("<p>Shinyapp Link: <a href='https://project2-group8.shinyapps.io/DisasterAnalysisApp/'>Group 8</a></p>")
           
         )
       )
@@ -356,12 +356,17 @@ server <- function(input, output, session) {
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None") & fyDeclared >= input$time_range[1] & fyDeclared <= input$time_range[2]) %>%
       group_by(fyDeclared) %>%
       summarise(frequency = n())
-    
+    if(nrow(filtered_data) == 0) {
+      p <- ggplot(filtered_data) +
+        ggtitle("No data available for selected options") +
+        theme_minimal()
+    } else {
     p <- ggplot(filtered_data, aes(x = fyDeclared, y = frequency)) +
       geom_bar(stat = "identity") +
       ggtitle(paste("Frequency of Selected Incident Type Over Specified Time Range in", ifelse(input$state == "None", "All States", input$state))) +
       xlab("Years")+
       ylab("Frequency")
+    }
     
     ggplotly(p)
   })
@@ -567,7 +572,7 @@ server <- function(input, output, session) {
     selected_state <- input$state1
     selected_year <- input$year
     
-    if (selected_state != "All") {
+    if (selected_state != "None") {
       filtered_data <- assistance_data %>%
         filter(stateCode == selected_state, fyDeclared == selected_year) %>%
         group_by(incidentType) %>%
@@ -607,7 +612,7 @@ server <- function(input, output, session) {
   #cost plot
   output$CostlinePlot <- renderPlotly({
     selected_state <- input$state1
-    if (selected_state != "All"){
+    if (selected_state != "None"){
       filtered_data <- assistance_data %>%
         filter(stateCode == selected_state) %>%
         group_by(fyDeclared) %>%
