@@ -2,7 +2,7 @@
 Term: Fall 2023
 
 + Team - Group 8
-+ **Projec title**: + Team members
++ Team members
 	+ Angel Wang
 	+ Haixin Shu
 	+ Yufei Wang
