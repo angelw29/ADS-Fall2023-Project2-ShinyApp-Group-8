@@ -9,15 +9,14 @@ library(scales)
 library(lubridate)
 library(DT)
 
-# Load your data
+# Load data
 fema_data = read.csv('data/DisasterDeclarationsSummaries.csv')
 cleaned_data<-fema_data[!duplicated(fema_data$disasterNumber),]
 state_coords <- read.csv("data/states.csv")
 incident_types <- c("Total", sort(unique(cleaned_data$incidentType)))
 assistance_data = read.csv('data/PublicAssistanceApplicantsProgramDeliveries.csv')
 
-
-# UI
+# Define UI ----
 ui <- dashboardPage(
   dashboardHeader(title = "FEMA Declarations"),
   dashboardSidebar(
@@ -34,6 +33,7 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
+      # ------------------ intro ----------------------------------------------------------------
       tabItem(tabName = "intro",
               img(src = "https://kubrick.htvapps.com/htv-prod-media.s3.amazonaws.com/images/fema-0120-1652375316.jpg", width = "500px"),
               h1("Welcome to the Disaster Visualization App!"),
@@ -43,10 +43,12 @@ ui <- dashboardPage(
               
               
       ),
+      # ------------------ data ----------------------------------------------------------------
       tabItem(tabName = "data",
               h1("Dataset"),
               DTOutput("table")
       ),
+      # ------------------ declaration counts ----------------------------------------------------------------
       tabItem(tabName = "declaration_counts",
               fluidRow(
                 box(width = 2,
@@ -57,6 +59,7 @@ ui <- dashboardPage(
                 box(plotOutput("disasterPieChart", height = "450px"), width = 5)
               )
       ),
+      # ------------------ trend tab ----------------------------------------------------------------
       tabItem(tabName = "trend_tab",
               h1("Trend for FEMA data"),
               selectInput("disaster_type", "Choose a Disaster Type", sort(unique(cleaned_data$incidentType))),
@@ -65,7 +68,7 @@ ui <- dashboardPage(
               plotlyOutput("linePlot"),
               plotlyOutput("barPlot")
       ),
-        
+      # ------------------ ProgramActivation_tab ----------------------------------------------------------------
       tabItem(tabName = "ProgramActivation_tab",
               h1("Program Activation Analysis"),
               p("To analyze which programs are activated for different types of disasters."),
@@ -86,7 +89,7 @@ ui <- dashboardPage(
               plotlyOutput("pieChart"),
               plotlyOutput("barChart")
       ),
-      
+      # ------------------ damage_cost ----------------------------------------------------------------
       tabItem(tabName = "damage_cost",
               h1("Damage Costs"),
               selectInput("state1", "Choose a State", c("None", sort(unique(assistance_data$stateCode)))),
@@ -94,6 +97,7 @@ ui <- dashboardPage(
               plotOutput("histogram"),
               plotlyOutput("CostlinePlot"),
       ),
+      # ------------------ finding and result -----------------------------------------------------------
       
       tabItem(tabName = "business",
               h1("Business Value"),
@@ -220,6 +224,8 @@ ui <- dashboardPage(
     
               
       ),
+      # ------------------ reference -----------------------------------------------------------
+      
       tabItem(
         tabName = "references",
         fluidPage(
@@ -241,10 +247,8 @@ ui <- dashboardPage(
     )
   )
 )
-# SERVER
+#===============================================Shiny SERVER=====================================================
 server <- function(input, output, session) {
-  # ... existing server logic ...
-  
   # For the "Dataset" tab
   output$table <- renderDT({
     datatable(
@@ -264,6 +268,7 @@ server <- function(input, output, session) {
   merged_data_total <- merge(declaration_counts_total, state_coords, by = "state", all.x = FALSE)
   merged_data_sub <- merge(declaration_counts_sub, state_coords, by = "state", all.x = FALSE)
   
+  # For the "declaration counts" tab
   filtered_data <- reactive({
     if (input$incidentType == "Total") {
       merged_data_total %>%
@@ -326,7 +331,7 @@ server <- function(input, output, session) {
           theme_minimal()}
   })
   
-  #For the trends tab 
+  #For the "trends" tab 
   output$linePlot <- renderPlotly({
     filtered_data <- cleaned_data %>%
       filter(incidentType == input$disaster_type & (state == input$state | input$state == "None")) %>%
@@ -567,7 +572,7 @@ server <- function(input, output, session) {
   
   
   
-  #histogram
+  # For the "damage cost" tab
   output$histogram <- renderPlot({
     selected_state <- input$state1
     selected_year <- input$year
@@ -609,7 +614,6 @@ server <- function(input, output, session) {
       print(p)
   })
   
-  #cost plot
   output$CostlinePlot <- renderPlotly({
     selected_state <- input$state1
     if (selected_state != "None"){
