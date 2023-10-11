@@ -7,7 +7,6 @@ library(tidyverse)
 library(plotly)
 library(scales)
 library(lubridate)
-
 library(DT)
 
 # Load your data
@@ -29,7 +28,8 @@ ui <- dashboardPage(
       menuItem("Trend for FEMA data", tabName = "trend_tab", icon = icon("chart-bar")),
       menuItem("Program Activation Analysis", tabName = "ProgramActivation_tab", icon = icon("exclamation-triangle")),
       menuItem("Damage Cost", tabName = "damage_cost", icon = icon("compass")),
-      menuItem("Business Values and Findings", tabName = "business", icon = icon("briefcase"))
+      menuItem("Business Values and Findings", tabName = "business", icon = icon("briefcase")),
+      menuItem("References", tabName = "references", icon = icon("info"))
     )
   ),
   dashboardBody(
@@ -91,7 +91,7 @@ ui <- dashboardPage(
               h1("Damage Costs"),
               selectInput("state1", "Choose a State", c("All", sort(unique(assistance_data$stateCode)))),
               selectInput("year", "Choose a Year", sort(unique(assistance_data$fyDeclared))),
-              plotlyOutput("histogram"),
+              plotOutput("histogram"),
               plotlyOutput("CostlinePlot"),
       ),
       
@@ -219,8 +219,24 @@ ui <- dashboardPage(
               )
     
               
+      ),
+      tabItem(
+        tabName = "references",
+        fluidPage(
+          h2("Data References"),
+          HTML("<p>Reference 1: <a href='https://www.fema.gov/openfema-data-page/fema-web-disaster-summaries-v1'>OpenFEMA Dataset: Disaster Declarations Summaries</a></p>"),
+          HTML("<p>Reference 2: <a href='https://github.com/jasperdebie/VisInfo/blob/master/us-state-capitals.csv'>Github: States' Longitude & Latitude</a></p>"),
+          HTML("<p>Reference 3: <a href='https://www.fema.gov/openfema-data-page/disaster-declarations-summaries-v2'>OpenFEMA Dataset: Public Assistance Applicants Program Deliveries</a></p>"),
+          h3('Contributors'),
+          h4('Hanxin Shu'),
+          h4('Mansi Singh'),
+          h4('Angel Wang'),
+          h4('Yufei Wang'),
+          h2("GitHub Repository"),
+          HTML("<p>Team Github Link: <a href='https://github.com/angelw29/ADS-Fall2023-Project2-ShinyApp-Group-8/tree/master'>Group 8</a></p>")
+          
+        )
       )
-      
       
     )
   )
@@ -549,7 +565,7 @@ server <- function(input, output, session) {
   
   
   #histogram
-  output$histogram <- renderPlotly({
+  output$histogram <- renderPlot({
     selected_state <- input$state1
     selected_year <- input$year
     
@@ -558,19 +574,20 @@ server <- function(input, output, session) {
         filter(stateCode == selected_state, fyDeclared == selected_year) %>%
         group_by(incidentType) %>%
         summarise(TotalDamageCost = sum(totalAppDamageCost))
+        filtered_data$TotalDamageCostInMillion <- filtered_data$TotalDamageCost / 1e6
       if(nrow(filtered_data) == 0) {
         p <- ggplot(filtered_data) +
           ggtitle("No data available for selected options") +
           theme_minimal()
       } else {
       
-      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+      p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCostInMillion, fill = incidentType)) +
         geom_bar(stat = "identity") +
         labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
-        scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
         coord_flip()+
         ggtitle(paste("Total Damage Costs by Incident Type in", selected_state, "for the Year",selected_year))+
         theme(plot.title = element_text(hjust = 0.5))
+
     } 
       }
     else {
@@ -578,16 +595,15 @@ server <- function(input, output, session) {
         filter(fyDeclared == selected_year) %>%
         group_by(stateCode, incidentType) %>%
         summarise(TotalDamageCost = sum(totalAppDamageCost))
-      
-        p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCost, fill = incidentType)) +
+      filtered_data$TotalDamageCostInMillion <- filtered_data$TotalDamageCost / 1e6
+        p <- ggplot(filtered_data, aes(x = incidentType, y = TotalDamageCostInMillion, fill = incidentType)) +
           geom_bar(stat = "identity", position = "dodge") +
           labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
-          scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
           coord_flip()+
           ggtitle(paste("Total Damage Costs by Incident Type in the US for the Year", selected_year))+
           theme(plot.title = element_text(hjust = 0.5))
       }
-      ggplotly(p)
+      print(p)
   })
   
   #cost plot
@@ -600,33 +616,44 @@ server <- function(input, output, session) {
         summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
         ungroup() %>%
         arrange(fyDeclared)
-      
+      filtered_data$TotalDamageCostInMillion <- filtered_data$TotalDamageCost / 1e6
       p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
         geom_line() +
         geom_point() +
         labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
-        scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
         ggtitle(paste("Total Damage Costs Over Years in", selected_state))+
         theme(plot.title = element_text(hjust = 0.5))
+      
+      p <- plot_ly(data = filtered_data, x = ~fyDeclared, y = ~TotalDamageCostInMillion, type = "scatter", mode = "lines+markers",
+                   text = ~paste("Total Damage cost: ", round(TotalDamageCostInMillion, 2), " million $"), hoverinfo = "text")%>%
+        layout(title = paste("Total Damage Costs Over Years in", selected_state),
+               yaxis = list(title = "Total Damage cost (in Million $)"),
+               xaxis = list(title = "Incident Type"))
+      
+      
     } else{
       filtered_data <- assistance_data %>%
         group_by(fyDeclared) %>%
         summarise(TotalDamageCost = sum(totalAppDamageCost)) %>%
         ungroup() %>%
         arrange(fyDeclared)
+      filtered_data$TotalDamageCostInMillion <- filtered_data$TotalDamageCost / 1e6
       
-      p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCost)) +
+      p <- ggplot(filtered_data, aes(x = fyDeclared, y = TotalDamageCostInMillion, text = paste("Total Damage cost: $", round(TotalDamageCostInMillion, 2), " million"))) +
         geom_line() +
         geom_point() +
         labs(x = "Incident Type", y = "Total Damage cost (in Million $)") +
-        scale_y_continuous(labels = scales::number_format(scale = 1e-6))+
-        ggtitle(paste("Total Damage Costs Over Years in the US"))+
+        ggtitle(paste("Total Damage Costs Over Years in the US")) +
         theme(plot.title = element_text(hjust = 0.5))
       
+      p <- plot_ly(data = filtered_data, x = ~fyDeclared, y = ~TotalDamageCostInMillion, type = "scatter", mode = "lines+markers",
+                          text = ~paste("Total Damage cost $: ", round(TotalDamageCostInMillion, 2), " million"), hoverinfo = "text") %>%
+        layout(title = "Total Damage Costs Over Years in the US",
+               yaxis = list(title = "Total Damage cost (in Million $)"),
+               xaxis = list(title = "Incident Type"))
+
     }
-    
-    
-    
+
     ggplotly(p)
   })
   
