@@ -232,8 +232,8 @@ ui <- dashboardPage(
           h4('Mansi Singh'),
           h4('Angel Wang'),
           h4('Yufei Wang'),
-          h2("Our Project"),
-          HTML("<p>Shinyapp Link: <a href='https://project2-group8.shinyapps.io/DisasterAnalysisApp/'>Group 8</a></p>")
+          h2("Github Link"),
+          HTML("<p>Our Project: <a href='https://github.com/angelw29/ADS-Fall2023-Project2-ShinyApp-Group-8'>Group 8</a></p>")
           
         )
       )
